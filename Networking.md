@@ -120,3 +120,8 @@ Addtional information can be found [here](https://kotlinlang.org/docs/reference/
 Essentially this is saying, instantiate this class using a `lazy` method.  This is very simular to Swift's lazy var property where the value can be computed upon accessing it. 
 
 ## Abstracting into a repository layer
+
+Create a repository package within the project. 
+
+This will further abstract out the interface. 
+
