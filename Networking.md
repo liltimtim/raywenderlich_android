@@ -171,3 +171,7 @@ class ItunesRepo(private val itunesService: ItunesService) {
 3. enqueue the task
 4. handle failure
 5. handle response success using callback. Results are optional values which may be nil.
+
+---
+
+## Adding Search Capabilities
