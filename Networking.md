@@ -2,15 +2,16 @@
 
 ### About Retrofit
 
-used to wrap the complexity of making networking requests with android.  Allows mapping JSON directly to Kotlin classes.
+used to wrap the complexity of making networking requests with android. Allows mapping JSON directly to Kotlin classes.
 
 **Builder**: creates concrete implementation of the interface
 
-**Annotations**: notation data that determines how the API is called and how to map the resulting json into model objects. 
+**Annotations**: notation data that determines how the API is called and how to map the resulting json into model objects.
 
 ## Installation
 
 Inside the Project gradle replace the `ext.kotlin_version` with the following.
+
 ```gradle
 // inside Project build.gradle
 ext {
@@ -19,7 +20,7 @@ ext {
 }
 ```
 
-Inside the App gradle add the following 
+Inside the App gradle add the following
 
 ```gradle
 dependencies {
@@ -47,7 +48,7 @@ data class PodcastResponse {
 }
 ```
 
-**Note** data classes do not have to mirror JSON structure 1 to 1.  You can override this behavior. 
+**Note** data classes do not have to mirror JSON structure 1 to 1. You can override this behavior.
 
 2. Create the Service layer interface
 
@@ -81,21 +82,25 @@ interface ItunesService {
 }
 ```
 
-1. This is a **Retrofit annoation**.  Annotations always start with the `@ symbol`.  This is a type of `function annotation`. 
-- Retrofit defines the common HTTP request verbs `GET, POST, PUT`.  the `path` comes from the single parameter and applies to the function that immediately follows
+1. This is a **Retrofit annoation**. Annotations always start with the `@ symbol`. This is a type of `function annotation`.
 
-2. `searchPodcastByTerms` takes single param via the `@Query` annotation.  Tells Retro this parameter should be added as a URL query term inside the path defined by the @GET annoation.
-- Always wrap the return type with the `Call` interface.  This allows invoking the returned function asynchronously or synchronsly and get back a `Response` object containing the `PodcastResponse`.
+- Retrofit defines the common HTTP request verbs `GET, POST, PUT`. the `path` comes from the single parameter and applies to the function that immediately follows
+
+2. `searchPodcastByTerms` takes single param via the `@Query` annotation. Tells Retro this parameter should be added as a URL query term inside the path defined by the @GET annoation.
+
+- Always wrap the return type with the `Call` interface. This allows invoking the returned function asynchronously or synchronsly and get back a `Response` object containing the `PodcastResponse`.
 
 3. a companion object is defined in the `ItunesService` interface.
 
-4. instance prop of the companion object holds the one and only application wide instance of the `ItunesService`.  
-- This property returns a `Singleton` object.  
+4. instance prop of the companion object holds the one and only application wide instance of the `ItunesService`.
 
-**Singleton Objects**: objects that have a single instance for the lifetime of the application.  No matter how many subsequent property accesses, it will only return one instance. 
+- This property returns a `Singleton` object.
 
-**Property delegation**: allows Kotlin to delegate the property setters and getters to a class.  
-- this is defined by the `by` keyword 
+**Singleton Objects**: objects that have a single instance for the lifetime of the application. No matter how many subsequent property accesses, it will only return one instance.
+
+**Property delegation**: allows Kotlin to delegate the property setters and getters to a class.
+
+- this is defined by the `by` keyword
 
 ```kotlin
 class SomeClass: {
@@ -117,11 +122,52 @@ class SomeDelegateClass {
 
 Addtional information can be found [here](https://kotlinlang.org/docs/reference/delegated-properties.html)
 
-Essentially this is saying, instantiate this class using a `lazy` method.  This is very simular to Swift's lazy var property where the value can be computed upon accessing it. 
+Essentially this is saying, instantiate this class using a `lazy` method. This is very simular to Swift's lazy var property where the value can be computed upon accessing it.
 
 ## Abstracting into a repository layer
 
-Create a repository package within the project. 
+Create a repository package within the project.
 
-This will further abstract out the interface. 
+This will further abstract out the interface.
 
+```kotlin
+import me.mobilefirst.podplay.service.ItunesService
+import me.mobilefirst.podplay.service.PodcastResponse
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
+// 0
+class ItunesRepo(private val itunesService: ItunesService) {
+    // 1
+    fun searchByTerm(term: String, callBack: (List<PodcastResponse.ItunesPodcast>?) -> Unit) {
+        // 2
+        val podcastCall = itunesService.searchPodcastByTerm(term)
+        // 3
+        podcastCall.enqueue(object : Callback<PodcastResponse> {
+            // 4
+            override fun onFailure(call: Call<PodcastResponse>, t: Throwable) {
+                callBack(null)
+            }
+            // 5
+            override fun onResponse(call: Call<PodcastResponse>, response: Response<PodcastResponse>) {
+                callBack(response?.body()?.results)
+            }
+        })
+    }
+}
+```
+
+0. Expects an already existing instance of the ItunesService layer
+
+- this is call depency injection
+- class doesn't care about what implements the service so long as the service conforms to the ItunesService interface definition
+
+1. takes in the search term and a callback with the response. Returns a "Unit"
+
+**Unit**: unit in Kotlin corresponds to the void in Java. Like void, Unit is the return type of any function that `does not return any meaningful value, and it is optional` to mention the Unit as the return type. But unlike void, Unit is a real class (Singleton) with only one instance.
+
+2. Creates the instance and returns the `Call<T>` object. This does not start the network request. You must `enqueue` the request.
+3. enqueue the task
+4. handle failure
+5. handle response success using callback. Results are optional values which may be nil.
